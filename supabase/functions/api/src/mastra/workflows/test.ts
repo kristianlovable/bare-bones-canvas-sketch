@@ -1,6 +1,7 @@
 
-import { createWorkflow, createStep } from "@mastra/core/workflows";
-import { z } from "zod";
+// Use dynamic imports with npm: prefix
+const { createWorkflow, createStep } = await import("npm:@mastra/core@0.0.0-workflow-deno-20250616132510/workflows");
+const { z } = await import("npm:zod");
 
 const cityCoordinatesStep = createStep({
   id: "test-step",

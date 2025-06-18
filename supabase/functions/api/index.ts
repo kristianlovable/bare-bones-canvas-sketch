@@ -1,15 +1,14 @@
+
 import { Hono } from "jsr:@hono/hono";
 import { cors } from "jsr:@hono/hono/cors";
 import { HTTPException } from "jsr:@hono/hono/http-exception";
 import { stream } from "jsr:@hono/hono/streaming";
-import {
-  getWorkflowByIdHandler,
-  getWorkflowRunsHandler,
-  createWorkflowRunHandler,
-  startWorkflowRunHandler,
-} from "@mastra/server/handlers/workflows";
+
+// Use npm: prefix for Mastra imports to ensure proper resolution
+const { getWorkflowByIdHandler, getWorkflowRunsHandler, createWorkflowRunHandler, startWorkflowRunHandler } = await import("npm:@mastra/server@0.0.0-workflow-deno-20250616132510/handlers/workflows");
+const { WorkflowRunState } = await import("npm:@mastra/core@0.0.0-workflow-deno-20250616132510/workflows");
+
 import { mastra } from "./src/mastra/index.ts";
-import { WorkflowRunState } from "@mastra/core/workflows";
 
 // 
 // You can set the basePath with Hono
