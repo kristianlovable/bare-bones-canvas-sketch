@@ -11,59 +11,83 @@ import {
 } from "@mastra/server/handlers/workflows";
 import { mastra } from "./src/mastra/index.ts";
 import { WorkflowRunState } from "@mastra/core/workflows";
+
 // You can set the basePath with Hono
 const functionName = "api";
 const app = new Hono().basePath(`/${functionName}`);
-// /tasks/id
+
+// Enable CORS for all origins to allow unauthenticated access
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: "*",
+    allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowHeaders: ["Content-Type", "Authorization", "x-client-info", "apikey"],
   })
 );
+
+// Handle preflight requests
+app.options("*", (c) => {
+  return c.text("", 200);
+});
+
 app.get("workflows/:id", async (c) => {
   const id = c.req.param("id");
-  return c.json(
-    await getWorkflowByIdHandler({
+  console.log(`Getting workflow: ${id}`);
+  try {
+    const result = await getWorkflowByIdHandler({
       mastra,
       workflowId: id,
-    })
-  );
+    });
+    return c.json(result);
+  } catch (error) {
+    console.error("Error getting workflow:", error);
+    return c.json({ error: "Workflow not found" }, 404);
+  }
 });
+
 app.get("workflows/:id/runs", async (c) => {
   const id = c.req.param("id");
-  return c.json(
-    await getWorkflowRunsHandler({
+  console.log(`Getting workflow runs for: ${id}`);
+  try {
+    const result = await getWorkflowRunsHandler({
       mastra,
       workflowId: id,
-    })
-  );
+    });
+    return c.json(result);
+  } catch (error) {
+    console.error("Error getting workflow runs:", error);
+    return c.json({ error: "Failed to get workflow runs" }, 500);
+  }
 });
+
 app.post("workflows/:id/create-run", async (c) => {
   const id = c.req.param("id");
   const prevRunId = c.req.query("runId");
+  console.log(`Creating run for workflow: ${id}, prevRunId: ${prevRunId}`);
   try {
-    return c.json(
-      await createWorkflowRunHandler({
-        mastra,
-        workflowId: id,
-        runId: prevRunId,
-      })
-    );
+    const result = await createWorkflowRunHandler({
+      mastra,
+      workflowId: id,
+      runId: prevRunId,
+    });
+    return c.json(result);
   } catch (error) {
-    console.log(error);
+    console.error("Error creating workflow run:", error);
     return c.json(
       {
         error: "Failed to create run",
+        details: error.message,
       },
       500
     );
   }
 });
+
 app.post("workflows/:id/start", async (c) => {
   const id = c.req.param("id");
   const { inputData } = await c.req.json();
   const runId = c.req.query("runId");
-  console.log({ runId, inputData });
+  console.log({ workflowId: id, runId, inputData });
   try {
     const result = await startWorkflowRunHandler({
       mastra,
@@ -75,10 +99,11 @@ app.post("workflows/:id/start", async (c) => {
     await new Promise((resolve) => setTimeout(resolve, 5000));
     return c.json(result);
   } catch (error) {
-    console.log(error);
+    console.error("Error starting workflow run:", error);
     return c.json(
       {
         error: "Failed to start run",
+        details: error.message,
       },
       500
     );
