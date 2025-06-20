@@ -9,7 +9,183 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      mastra_evals: {
+        Row: {
+          agent_name: string
+          created_at: string
+          createdAt: string | null
+          global_run_id: string
+          input: string
+          instructions: string
+          metric_name: string
+          output: string
+          result: Json
+          run_id: string
+          test_info: Json | null
+        }
+        Insert: {
+          agent_name: string
+          created_at: string
+          createdAt?: string | null
+          global_run_id: string
+          input: string
+          instructions: string
+          metric_name: string
+          output: string
+          result: Json
+          run_id: string
+          test_info?: Json | null
+        }
+        Update: {
+          agent_name?: string
+          created_at?: string
+          createdAt?: string | null
+          global_run_id?: string
+          input?: string
+          instructions?: string
+          metric_name?: string
+          output?: string
+          result?: Json
+          run_id?: string
+          test_info?: Json | null
+        }
+        Relationships: []
+      }
+      mastra_messages: {
+        Row: {
+          content: string
+          createdAt: string
+          id: string
+          resourceId: string | null
+          role: string
+          thread_id: string
+          type: string
+        }
+        Insert: {
+          content: string
+          createdAt: string
+          id: string
+          resourceId?: string | null
+          role: string
+          thread_id: string
+          type: string
+        }
+        Update: {
+          content?: string
+          createdAt?: string
+          id?: string
+          resourceId?: string | null
+          role?: string
+          thread_id?: string
+          type?: string
+        }
+        Relationships: []
+      }
+      mastra_threads: {
+        Row: {
+          createdAt: string
+          id: string
+          metadata: string | null
+          resourceId: string
+          title: string
+          updatedAt: string
+        }
+        Insert: {
+          createdAt: string
+          id: string
+          metadata?: string | null
+          resourceId: string
+          title: string
+          updatedAt: string
+        }
+        Update: {
+          createdAt?: string
+          id?: string
+          metadata?: string | null
+          resourceId?: string
+          title?: string
+          updatedAt?: string
+        }
+        Relationships: []
+      }
+      mastra_traces: {
+        Row: {
+          attributes: Json | null
+          createdAt: string
+          endTime: number
+          events: Json | null
+          id: string
+          kind: number
+          links: Json | null
+          name: string
+          other: string | null
+          parentSpanId: string | null
+          scope: string
+          startTime: number
+          status: Json | null
+          traceId: string
+        }
+        Insert: {
+          attributes?: Json | null
+          createdAt: string
+          endTime: number
+          events?: Json | null
+          id: string
+          kind: number
+          links?: Json | null
+          name: string
+          other?: string | null
+          parentSpanId?: string | null
+          scope: string
+          startTime: number
+          status?: Json | null
+          traceId: string
+        }
+        Update: {
+          attributes?: Json | null
+          createdAt?: string
+          endTime?: number
+          events?: Json | null
+          id?: string
+          kind?: number
+          links?: Json | null
+          name?: string
+          other?: string | null
+          parentSpanId?: string | null
+          scope?: string
+          startTime?: number
+          status?: Json | null
+          traceId?: string
+        }
+        Relationships: []
+      }
+      mastra_workflow_snapshot: {
+        Row: {
+          createdAt: string
+          resourceId: string | null
+          run_id: string
+          snapshot: string
+          updatedAt: string
+          workflow_name: string
+        }
+        Insert: {
+          createdAt: string
+          resourceId?: string | null
+          run_id: string
+          snapshot: string
+          updatedAt: string
+          workflow_name: string
+        }
+        Update: {
+          createdAt?: string
+          resourceId?: string | null
+          run_id?: string
+          snapshot?: string
+          updatedAt?: string
+          workflow_name?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
