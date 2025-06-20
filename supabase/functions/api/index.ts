@@ -1,11 +1,10 @@
-
 import { Hono } from "jsr:@hono/hono";
 import { cors } from "jsr:@hono/hono/cors";
 import { HTTPException } from "jsr:@hono/hono/http-exception";
 import { stream } from "jsr:@hono/hono/streaming";
 
 // Use npm: prefix for Mastra imports to ensure proper resolution
-const { getWorkflowByIdHandler, getWorkflowRunsHandler, createWorkflowRunHandler, startWorkflowRunHandler } = await import("npm:@mastra/server@0.0.0-workflow-deno-20250616132510/handlers/workflows");
+const { getWorkflowByIdHandler, getWorkflowRunsHandler, createWorkflowRunHandler, startWorkflowRunHandler, getWorkflowsHandler } = await import("npm:@mastra/server@0.0.0-workflow-deno-20250616132510/handlers/workflows");
 const { WorkflowRunState } = await import("npm:@mastra/core@0.0.0-workflow-deno-20250616132510/workflows");
 
 import { mastra } from "./src/mastra/index.ts";
@@ -27,6 +26,19 @@ app.use(
 // Handle preflight requests
 app.options("*", (c) => {
   return c.text("", 200);
+});
+
+app.get("workflows", async (c) => {
+  console.log("Getting all workflows");
+  try {
+    const result = await getWorkflowsHandler({
+      mastra,
+    });
+    return c.json(result);
+  } catch (error) {
+    console.error("Error getting workflows:", error);
+    return c.json({ error: "Failed to get workflows" }, 500);
+  }
 });
 
 app.get("workflows/:id", async (c) => {
