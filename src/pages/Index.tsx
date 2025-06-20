@@ -1,11 +1,13 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
   const [response, setResponse] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [word, setWord] = useState("");
   const { toast } = useToast();
 
   const callWorkflowEndpoint = async () => {
@@ -38,19 +40,100 @@ const Index = () => {
     }
   };
 
+  const getDefinition = async () => {
+    if (!word.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a word",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Create a new run
+      const createRunResponse = await fetch(
+        "https://nqspuwzqrwamccpqwwvj.supabase.co/functions/v1/api/workflows/definition/create-run",
+        { method: "POST" }
+      );
+      
+      if (!createRunResponse.ok) {
+        throw new Error(`HTTP error! status: ${createRunResponse.status}`);
+      }
+      
+      const runData = await createRunResponse.json();
+      const runId = runData.runId;
+
+      // Start the workflow
+      const startResponse = await fetch(
+        `https://nqspuwzqrwamccpqwwvj.supabase.co/functions/v1/api/workflows/definition/start?runId=${runId}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            inputData: { word: word.trim() },
+          }),
+        }
+      );
+
+      if (!startResponse.ok) {
+        throw new Error(`HTTP error! status: ${startResponse.status}`);
+      }
+
+      const result = await startResponse.json();
+      setResponse(result);
+      
+      toast({
+        title: "Success!",
+        description: `Got definition for "${word}"`,
+      });
+    } catch (error) {
+      console.error("Error getting definition:", error);
+      toast({
+        title: "Error",
+        description: "Failed to get definition",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-8">
       <div className="text-center max-w-2xl">
         <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
         <p className="text-xl text-gray-600 mb-8">Start building your amazing project here!</p>
         
-        <Button 
-          onClick={callWorkflowEndpoint} 
-          disabled={loading}
-          className="mb-8"
-        >
-          {loading ? "Calling Workflow..." : "Call Workflow Endpoint"}
-        </Button>
+        <div className="space-y-4 mb-8">
+          <Button 
+            onClick={callWorkflowEndpoint} 
+            disabled={loading}
+            className="w-full"
+          >
+            {loading ? "Calling Workflow..." : "Call Dummy Workflow"}
+          </Button>
+
+          <div className="flex gap-2">
+            <Input
+              type="text"
+              placeholder="Enter a word to define..."
+              value={word}
+              onChange={(e) => setWord(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && getDefinition()}
+              className="flex-1"
+            />
+            <Button 
+              onClick={getDefinition} 
+              disabled={loading || !word.trim()}
+            >
+              {loading ? "Getting..." : "Get Definition"}
+            </Button>
+          </div>
+        </div>
 
         {response && (
           <div className="mt-8 p-6 bg-white rounded-lg shadow-lg text-left">
