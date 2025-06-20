@@ -28,7 +28,7 @@ app.options("*", (c) => {
   return c.text("", 200);
 });
 
-app.get("workflows", async (c) => {
+app.get("/workflows", async (c) => {
   console.log("Getting all workflows");
   try {
     const result = await getWorkflowsHandler({
@@ -41,7 +41,7 @@ app.get("workflows", async (c) => {
   }
 });
 
-app.get("workflows/:id", async (c) => {
+app.get("/workflows/:id", async (c) => {
   const id = c.req.param("id");
   console.log(`Getting workflow: ${id}`);
   try {
@@ -56,7 +56,7 @@ app.get("workflows/:id", async (c) => {
   }
 });
 
-app.get("workflows/:id/runs", async (c) => {
+app.get("/workflows/:id/runs", async (c) => {
   const id = c.req.param("id");
   console.log(`Getting workflow runs for: ${id}`);
   try {
@@ -71,7 +71,7 @@ app.get("workflows/:id/runs", async (c) => {
   }
 });
 
-app.post("workflows/:id/create-run", async (c) => {
+app.post("/workflows/:id/create-run", async (c) => {
   const id = c.req.param("id");
   const prevRunId = c.req.query("runId");
   console.log(`Creating run for workflow: ${id}, prevRunId: ${prevRunId}`);
@@ -94,7 +94,7 @@ app.post("workflows/:id/create-run", async (c) => {
   }
 });
 
-app.post("workflows/:id/start", async (c) => {
+app.post("/workflows/:id/start", async (c) => {
   const id = c.req.param("id");
   const { inputData } = await c.req.json();
   const runId = c.req.query("runId");
@@ -121,7 +121,7 @@ app.post("workflows/:id/start", async (c) => {
   }
 });
 
-app.get("workflows/:id/watch", (c) => {
+app.get("/workflows/:id/watch", (c) => {
   try {
     console.log("watch workflow");
     const logger = mastra.getLogger();
