@@ -4,6 +4,7 @@ const { Mastra } = await import("npm:@mastra/core@0.0.0-workflow-deno-2025061613
 const { PostgresStore } = await import("npm:@mastra/pg@0.0.0-workflow-deno-20250616132510");
 import { dummyWorkflow } from "./workflows/test.ts";
 import { definitionWorkflow } from "./workflows/definition.ts";
+import { issueTriageWorkflow } from "./workflows/issue-triage.ts";
 
 // Fetch SUPABASE_DB_URL from edge function secrets/environment
 const supabaseDbUrl = Deno.env.get("SUPABASE_DB_URL");
@@ -24,5 +25,6 @@ export const mastra = new Mastra({
   workflows: {
     dummy: dummyWorkflow,
     definition: definitionWorkflow,
+    "issue-triage": issueTriageWorkflow,
   },
 });

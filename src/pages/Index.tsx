@@ -2,12 +2,14 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
   const [response, setResponse] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [word, setWord] = useState("");
+  const [userMessage, setUserMessage] = useState("");
   const { toast } = useToast();
 
   const callWorkflowEndpoint = async () => {
@@ -102,13 +104,75 @@ const Index = () => {
     }
   };
 
+  const triageIssue = async () => {
+    if (!userMessage.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a user message",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Create a new run
+      const createRunResponse = await fetch(
+        "https://nqspuwzqrwamccpqwwvj.supabase.co/functions/v1/api/workflows/issue-triage/create-run",
+        { method: "POST" }
+      );
+      
+      if (!createRunResponse.ok) {
+        throw new Error(`HTTP error! status: ${createRunResponse.status}`);
+      }
+      
+      const runData = await createRunResponse.json();
+      const runId = runData.runId;
+
+      // Start the workflow
+      const startResponse = await fetch(
+        `https://nqspuwzqrwamccpqwwvj.supabase.co/functions/v1/api/workflows/issue-triage/start?runId=${runId}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            inputData: { userMessage: userMessage.trim() },
+          }),
+        }
+      );
+
+      if (!startResponse.ok) {
+        throw new Error(`HTTP error! status: ${startResponse.status}`);
+      }
+
+      const result = await startResponse.json();
+      setResponse(result);
+      
+      toast({
+        title: "Success!",
+        description: "Issue triage completed and Slack notification sent",
+      });
+    } catch (error) {
+      console.error("Error triaging issue:", error);
+      toast({
+        title: "Error",
+        description: "Failed to triage issue",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-8">
       <div className="text-center max-w-2xl">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-gray-600 mb-8">Start building your amazing project here!</p>
+        <h1 className="text-4xl font-bold mb-4">Mastra Workflows</h1>
+        <p className="text-xl text-gray-600 mb-8">Test your workflows here!</p>
         
-        <div className="space-y-4 mb-8">
+        <div className="space-y-6 mb-8">
           <Button 
             onClick={callWorkflowEndpoint} 
             disabled={loading}
@@ -131,6 +195,23 @@ const Index = () => {
               disabled={loading || !word.trim()}
             >
               {loading ? "Getting..." : "Get Definition"}
+            </Button>
+          </div>
+
+          <div className="space-y-2">
+            <Textarea
+              placeholder="Enter user support message to triage..."
+              value={userMessage}
+              onChange={(e) => setUserMessage(e.target.value)}
+              className="w-full min-h-[100px]"
+            />
+            <Button 
+              onClick={triageIssue} 
+              disabled={loading || !userMessage.trim()}
+              className="w-full"
+              variant="secondary"
+            >
+              {loading ? "Triaging..." : "Triage Issue & Notify Slack"}
             </Button>
           </div>
         </div>
