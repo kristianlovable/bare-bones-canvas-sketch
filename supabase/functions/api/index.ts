@@ -12,7 +12,7 @@ import { mastra } from "./src/mastra/index.ts";
 // 
 // You can set the basePath with Hono
 const functionName = "api";
-const app = new Hono();
+const app = new Hono().basePath(`/${functionName}`);
 
 // Enable CORS for all origins to allow unauthenticated access
 app.use(
