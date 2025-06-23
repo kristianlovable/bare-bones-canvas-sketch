@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -359,7 +360,7 @@ const Index = () => {
     if (!response) return null;
 
     // Check if this is a rap song result
-    if (response.result && typeof response.result === 'string' && response.result.includes('verse') || response.result.includes('chorus')) {
+    if (response.result && typeof response.result === 'string' && (response.result.includes('verse') || response.result.includes('chorus'))) {
       return (
         <Card className="mt-8">
           <CardHeader>
