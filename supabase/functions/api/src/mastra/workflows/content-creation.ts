@@ -18,9 +18,8 @@ const researchTopicStep = createStep({
     console.log("Researching topic:", inputData.topic);
 
     try {
-      // Get the web search tool from mastra instance
-      const tools = mastra?.getTools?.() || {};
-      const webSearchTool = tools["web-search"];
+      // Get the web search tool from mastra instance using the correct method
+      const webSearchTool = mastra?.tools?.["web-search"] || mastra?.getTools?.()?.["web-search"];
       
       if (!webSearchTool) {
         console.log("Web search tool not found, using fallback research data");
@@ -29,6 +28,8 @@ const researchTopicStep = createStep({
           researchData: `Research topic: ${inputData.topic}. This is a placeholder for research data as the web search tool is not available.`,
         };
       }
+
+      console.log("Found web search tool, executing search...");
 
       const searchResult = await webSearchTool.execute({
         context: { 
@@ -143,9 +144,8 @@ const createContentStep = createStep({
     console.log("Creating content with AI agent for topic:", inputData.topic);
 
     try {
-      // Get the content agent from mastra instance
-      const agents = mastra?.getAgents?.() || {};
-      const agent = agents["contentAgent"];
+      // Get the content agent from mastra instance using the correct method
+      const agent = mastra?.agents?.["contentAgent"] || mastra?.getAgents?.()?.["contentAgent"];
       
       if (!agent) {
         throw new Error("Content agent not found");
