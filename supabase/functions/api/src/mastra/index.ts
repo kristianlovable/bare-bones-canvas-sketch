@@ -28,6 +28,8 @@ const storage = new PostgresStore({
   connectionString: supabaseDbUrl,
 });
 
+console.log("Registering web search tool:", webSearchTool);
+
 export const mastra = new Mastra({
   storage,
   workflows: {
@@ -48,3 +50,5 @@ export const mastra = new Mastra({
     "web-search": webSearchTool,
   },
 });
+
+console.log("Mastra tools registered:", Object.keys(mastra.tools || {}));

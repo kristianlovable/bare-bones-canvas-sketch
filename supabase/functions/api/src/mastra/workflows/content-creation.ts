@@ -15,30 +15,19 @@ const researchTopicStep = createStep({
   }),
   execute: async ({ inputData, mastra }) => {
     console.log("Researching topic:", inputData.topic);
+    console.log("Mastra object:", !!mastra);
+    console.log("Mastra tools:", mastra ? Object.keys(mastra.tools || {}) : "no mastra");
 
     try {
-      // Try multiple ways to access the web search tool
-      let webSearchTool = null;
-      
-      // Method 1: Direct access via tools property
-      if (mastra?.tools && mastra.tools["web-search"]) {
-        webSearchTool = mastra.tools["web-search"];
-        console.log("Found web search tool via direct access");
-      }
-      // Method 2: Access via getTools method if it exists
-      else if (mastra?.getTools) {
-        const tools = mastra.getTools();
-        webSearchTool = tools["web-search"];
-        if (webSearchTool) {
-          console.log("Found web search tool via getTools method");
-        }
-      }
+      // Direct access to the web search tool
+      const webSearchTool = mastra?.tools?.["web-search"];
       
       if (!webSearchTool) {
-        console.log("Web search tool not found, using fallback research data");
+        console.log("Web search tool not found in mastra.tools");
+        console.log("Available tools:", mastra ? Object.keys(mastra.tools || {}) : "none");
         return {
           topic: inputData.topic,
-          researchData: `Research topic: ${inputData.topic}. This is a placeholder for research data as the web search tool is not available.`,
+          researchData: `Research topic: ${inputData.topic}. Web search tool not available in tools: ${mastra ? Object.keys(mastra.tools || {}).join(', ') : 'no mastra'}`,
         };
       }
 
@@ -49,7 +38,7 @@ const researchTopicStep = createStep({
         mastra,
       });
 
-      console.log("Research data collected successfully");
+      console.log("Search result:", searchResult);
 
       // Convert search results to string format
       const researchDataString = Array.isArray(searchResult.results) 
