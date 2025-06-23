@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +13,7 @@ const Index = () => {
   const [jokeWord, setJokeWord] = useState("");
   const [cityForActivities, setCityForActivities] = useState("");
   const [rapTheme, setRapTheme] = useState("");
+  const [contentTopic, setContentTopic] = useState("");
   const { toast } = useToast();
 
   const callWorkflowEndpoint = async () => {
@@ -356,8 +356,86 @@ const Index = () => {
     }
   };
 
+  const createContent = async () => {
+    if (!contentTopic.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a topic for content creation",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Create a new run
+      const createRunResponse = await fetch(
+        "https://nqspuwzqrwamccpqwwvj.supabase.co/functions/v1/api/workflows/content-creation/create-run",
+        { method: "POST" }
+      );
+      
+      if (!createRunResponse.ok) {
+        throw new Error(`HTTP error! status: ${createRunResponse.status}`);
+      }
+      
+      const runData = await createRunResponse.json();
+      const runId = runData.runId;
+
+      // Start the workflow
+      const startResponse = await fetch(
+        `https://nqspuwzqrwamccpqwwvj.supabase.co/functions/v1/api/workflows/content-creation/start?runId=${runId}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            inputData: { topic: contentTopic.trim() },
+          }),
+        }
+      );
+
+      if (!startResponse.ok) {
+        throw new Error(`HTTP error! status: ${startResponse.status}`);
+      }
+
+      const result = await startResponse.json();
+      setResponse(result);
+      
+      toast({
+        title: "Success!",
+        description: `Created content about "${contentTopic}"`,
+      });
+    } catch (error) {
+      console.error("Error creating content:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create content",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const renderWorkflowResult = () => {
     if (!response) return null;
+
+    // Check if this is a content creation result
+    if (response.result && typeof response.result === 'string' && (response.result.includes('introduction') || response.result.includes('conclusion') || response.result.length > 500)) {
+      return (
+        <Card className="mt-8">
+          <CardHeader>
+            <CardTitle>📝 Generated Content</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="whitespace-pre-wrap bg-purple-50 p-4 rounded border border-purple-200">
+              {response.result}
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
 
     // Check if this is a rap song result
     if (response.result && typeof response.result === 'string' && (response.result.includes('verse') || response.result.includes('chorus'))) {
@@ -368,22 +446,6 @@ const Index = () => {
           </CardHeader>
           <CardContent>
             <div className="whitespace-pre-wrap font-mono text-sm bg-gray-50 p-4 rounded border">
-              {response.result}
-            </div>
-          </CardContent>
-        </Card>
-      );
-    }
-
-    // Check if this is a joke result
-    if (response.result && typeof response.result === 'string' && (response.result.includes('Why') || response.result.includes('joke'))) {
-      return (
-        <Card className="mt-8">
-          <CardHeader>
-            <CardTitle>😄 Generated Joke</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-lg bg-yellow-50 p-4 rounded border border-yellow-200">
               {response.result}
             </div>
           </CardContent>
@@ -521,6 +583,24 @@ const Index = () => {
               variant="outline"
             >
               {loading ? "Planning..." : "Plan Activities"}
+            </Button>
+          </div>
+
+          <div className="flex gap-2">
+            <Input
+              type="text"
+              placeholder="Enter a topic for content creation..."
+              value={contentTopic}
+              onChange={(e) => setContentTopic(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && createContent()}
+              className="flex-1"
+            />
+            <Button 
+              onClick={createContent} 
+              disabled={loading || !contentTopic.trim()}
+              variant="outline"
+            >
+              {loading ? "Creating..." : "Create Content"}
             </Button>
           </div>
 
