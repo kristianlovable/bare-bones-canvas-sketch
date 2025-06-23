@@ -17,12 +17,19 @@ const researchTopicStep = createStep({
   execute: async ({ inputData, mastra }) => {
     console.log("Researching topic:", inputData.topic);
 
-    const webSearchTool = mastra?.getTool("web-search");
-    if (!webSearchTool) {
-      throw new Error("Web search tool not found");
-    }
-
     try {
+      // Get the web search tool from mastra instance
+      const tools = mastra?.getTools?.() || {};
+      const webSearchTool = tools["web-search"];
+      
+      if (!webSearchTool) {
+        console.log("Web search tool not found, using fallback research data");
+        return {
+          topic: inputData.topic,
+          researchData: `Research topic: ${inputData.topic}. This is a placeholder for research data as the web search tool is not available.`,
+        };
+      }
+
       const searchResult = await webSearchTool.execute({
         context: { 
           query: `${inputData.topic} latest information facts trends` 
@@ -32,13 +39,22 @@ const researchTopicStep = createStep({
 
       console.log("Research data collected successfully");
 
+      // Convert search results to string format
+      const researchDataString = Array.isArray(searchResult.results) 
+        ? searchResult.results.map(result => `Title: ${result.title}\nContent: ${result.content}`).join('\n\n')
+        : JSON.stringify(searchResult.results);
+
       return {
         topic: inputData.topic,
-        researchData: searchResult.results || "No research data found",
+        researchData: researchDataString || "No research data found",
       };
     } catch (error) {
       console.error("Error during research:", error);
-      throw new Error(`Failed to research topic: ${error.message}`);
+      // Return fallback data instead of throwing error
+      return {
+        topic: inputData.topic,
+        researchData: `Research topic: ${inputData.topic}. Error occurred during research: ${error.message}`,
+      };
     }
   },
 });
@@ -126,12 +142,15 @@ const createContentStep = createStep({
   execute: async ({ inputData, mastra }) => {
     console.log("Creating content with AI agent for topic:", inputData.topic);
 
-    const agent = mastra?.getAgent("contentAgent");
-    if (!agent) {
-      throw new Error("Content agent not found");
-    }
-
     try {
+      // Get the content agent from mastra instance
+      const agents = mastra?.getAgents?.() || {};
+      const agent = agents["contentAgent"];
+      
+      if (!agent) {
+        throw new Error("Content agent not found");
+      }
+
       const prompt = `Based on the following research and analysis, create engaging, well-structured content about "${inputData.topic}":
 
 ${inputData.structuredData}
