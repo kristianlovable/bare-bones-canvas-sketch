@@ -1,4 +1,3 @@
-
 // Use dynamic imports with npm: prefix
 const { createWorkflow, createStep } = await import("npm:@mastra/core@0.0.0-workflow-deno-20250616132510/workflows");
 const { z } = await import("npm:zod");
@@ -18,8 +17,22 @@ const researchTopicStep = createStep({
     console.log("Researching topic:", inputData.topic);
 
     try {
-      // Get the web search tool from mastra instance using the correct method
-      const webSearchTool = mastra?.tools?.["web-search"] || mastra?.getTools?.()?.["web-search"];
+      // Try multiple ways to access the web search tool
+      let webSearchTool = null;
+      
+      // Method 1: Direct access via tools property
+      if (mastra?.tools && mastra.tools["web-search"]) {
+        webSearchTool = mastra.tools["web-search"];
+        console.log("Found web search tool via direct access");
+      }
+      // Method 2: Access via getTools method if it exists
+      else if (mastra?.getTools) {
+        const tools = mastra.getTools();
+        webSearchTool = tools["web-search"];
+        if (webSearchTool) {
+          console.log("Found web search tool via getTools method");
+        }
+      }
       
       if (!webSearchTool) {
         console.log("Web search tool not found, using fallback research data");
@@ -32,9 +45,7 @@ const researchTopicStep = createStep({
       console.log("Found web search tool, executing search...");
 
       const searchResult = await webSearchTool.execute({
-        context: { 
-          query: `${inputData.topic} latest information facts trends` 
-        },
+        context: `${inputData.topic} latest information facts trends`,
         mastra,
       });
 
@@ -144,8 +155,18 @@ const createContentStep = createStep({
     console.log("Creating content with AI agent for topic:", inputData.topic);
 
     try {
-      // Get the content agent from mastra instance using the correct method
-      const agent = mastra?.agents?.["contentAgent"] || mastra?.getAgents?.()?.["contentAgent"];
+      // Try multiple ways to access the content agent
+      let agent = null;
+      
+      // Method 1: Direct access via agents property
+      if (mastra?.agents && mastra.agents["contentAgent"]) {
+        agent = mastra.agents["contentAgent"];
+      }
+      // Method 2: Access via getAgents method if it exists
+      else if (mastra?.getAgents) {
+        const agents = mastra.getAgents();
+        agent = agents["contentAgent"];
+      }
       
       if (!agent) {
         throw new Error("Content agent not found");
