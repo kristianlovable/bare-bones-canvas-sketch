@@ -5,7 +5,7 @@ const { z } = await import("npm:zod");
 
 const generateRapSongStep = createStep({
   id: "generate-rap-song-step",
-  description: "Generates a rap song based on a given theme or topic using the rap agent",
+  description: "Generates a rap song based on a given theme or topic using the rap agent with web search capabilities",
   inputSchema: z.object({
     theme: z.string(),
   }),
@@ -24,18 +24,20 @@ const generateRapSongStep = createStep({
     try {
       const prompt = `Create an original rap song about: ${inputData.theme}
 
-Make it creative, engaging, and full of clever wordplay. Include a catchy hook and maintain good flow throughout.`;
+First, search the web for current information, facts, and context about this theme. Then use that information to create a creative, engaging rap song with clever wordplay and good flow. Include real facts and current details when relevant to make the lyrics more authentic and informative.`;
 
       const response = await agent.generate([
         {
           role: "user",
           content: prompt,
         },
-      ]);
+      ], {
+        maxSteps: 3, // Allow multiple steps for web search and generation
+      });
 
       const rapSong = response.text;
 
-      console.log("Rap song generated successfully");
+      console.log("Rap song generated successfully with web research");
 
       return {
         theme: inputData.theme,
@@ -50,7 +52,7 @@ Make it creative, engaging, and full of clever wordplay. Include a catchy hook a
 
 export const rapSongWorkflow = createWorkflow({
   id: "rap-song",
-  description: "A workflow that generates rap songs based on a given theme using AI",
+  description: "A workflow that generates rap songs based on a given theme using AI with web search capabilities",
   steps: [generateRapSongStep],
   inputSchema: z.object({
     theme: z.string(),
