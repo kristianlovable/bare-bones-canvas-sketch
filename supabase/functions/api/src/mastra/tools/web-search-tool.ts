@@ -20,10 +20,16 @@ export const webSearchTool = createTool({
     const tavilyApiKey = Deno.env.get("TAVILY_API_KEY");
     
     if (!tavilyApiKey) {
-      throw new Error("Tavily API key not found");
+      console.log("Tavily API key not found, returning empty results");
+      return {
+        results: [],
+      };
     }
 
-    console.log("Searching web for:", context.query);
+    // Handle both direct query and nested context structures
+    const query = typeof context === 'string' ? context : context.query;
+    
+    console.log("Searching web for:", query);
 
     try {
       const response = await fetch("https://api.tavily.com/search", {
@@ -33,7 +39,7 @@ export const webSearchTool = createTool({
         },
         body: JSON.stringify({
           api_key: tavilyApiKey,
-          query: context.query,
+          query: query,
           search_depth: "basic",
           include_answer: false,
           max_results: 5,
@@ -41,14 +47,17 @@ export const webSearchTool = createTool({
       });
 
       if (!response.ok) {
-        throw new Error(`Tavily API error: ${response.status}`);
+        console.error(`Tavily API error: ${response.status} - ${response.statusText}`);
+        return {
+          results: [],
+        };
       }
 
       const data = await response.json();
       const searchResults = data.results?.slice(0, 5).map((result: any) => ({
-        title: result.title,
-        url: result.url,
-        content: result.content.substring(0, 300), // Limit content length
+        title: result.title || "No title",
+        url: result.url || "",
+        content: (result.content || result.snippet || "No content available").substring(0, 300), // Limit content length
       })) || [];
 
       console.log("Web search completed, found results:", searchResults.length);
