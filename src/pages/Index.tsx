@@ -11,6 +11,7 @@ const Index = () => {
   const [userMessage, setUserMessage] = useState("");
   const [jokeWord, setJokeWord] = useState("");
   const [numberToClassify, setNumberToClassify] = useState("");
+  const [cityForActivities, setCityForActivities] = useState("");
   const { toast } = useToast();
 
   const callWorkflowEndpoint = async () => {
@@ -293,6 +294,68 @@ const Index = () => {
     }
   };
 
+  const planActivities = async () => {
+    if (!cityForActivities.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a city name",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Create a new run
+      const createRunResponse = await fetch(
+        "https://nqspuwzqrwamccpqwwvj.supabase.co/functions/v1/api/workflows/activity-planning/create-run",
+        { method: "POST" }
+      );
+      
+      if (!createRunResponse.ok) {
+        throw new Error(`HTTP error! status: ${createRunResponse.status}`);
+      }
+      
+      const runData = await createRunResponse.json();
+      const runId = runData.runId;
+
+      // Start the workflow
+      const startResponse = await fetch(
+        `https://nqspuwzqrwamccpqwwvj.supabase.co/functions/v1/api/workflows/activity-planning/start?runId=${runId}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            inputData: { city: cityForActivities.trim() },
+          }),
+        }
+      );
+
+      if (!startResponse.ok) {
+        throw new Error(`HTTP error! status: ${startResponse.status}`);
+      }
+
+      const result = await startResponse.json();
+      setResponse(result);
+      
+      toast({
+        title: "Success!",
+        description: `Generated activity plan for ${cityForActivities}`,
+      });
+    } catch (error) {
+      console.error("Error planning activities:", error);
+      toast({
+        title: "Error",
+        description: "Failed to plan activities",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-8">
       <div className="text-center max-w-2xl">
@@ -358,6 +421,24 @@ const Index = () => {
               variant="outline"
             >
               {loading ? "Classifying..." : "Classify Number"}
+            </Button>
+          </div>
+
+          <div className="flex gap-2">
+            <Input
+              type="text"
+              placeholder="Enter a city for activity planning..."
+              value={cityForActivities}
+              onChange={(e) => setCityForActivities(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && planActivities()}
+              className="flex-1"
+            />
+            <Button 
+              onClick={planActivities} 
+              disabled={loading || !cityForActivities.trim()}
+              variant="outline"
+            >
+              {loading ? "Planning..." : "Plan Activities"}
             </Button>
           </div>
 

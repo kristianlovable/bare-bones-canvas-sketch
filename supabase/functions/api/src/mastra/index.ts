@@ -1,3 +1,4 @@
+
 // Use dynamic imports with npm: prefix for better compatibility
 const { Mastra } = await import("npm:@mastra/core@0.0.0-workflow-deno-20250616132510/mastra");
 const { PostgresStore } = await import("npm:@mastra/pg@0.0.0-workflow-deno-20250616132510");
@@ -6,6 +7,8 @@ import { definitionWorkflow } from "./workflows/definition.ts";
 import { issueTriageWorkflow } from "./workflows/issue-triage.ts";
 import { jokeWorkflow } from "./workflows/joke.ts";
 import { numberClassifierWorkflow } from "./workflows/number-classifier.ts";
+import { activityPlanningWorkflow } from "./workflows/activity-planning.ts";
+import { planningAgent } from "./agents/planning-agent.ts";
 
 // Fetch SUPABASE_DB_URL from edge function secrets/environment
 const supabaseDbUrl = Deno.env.get("SUPABASE_DB_URL");
@@ -29,5 +32,9 @@ export const mastra = new Mastra({
     "issue-triage": issueTriageWorkflow,
     joke: jokeWorkflow,
     "number-classifier": numberClassifierWorkflow,
+    "activity-planning": activityPlanningWorkflow,
+  },
+  agents: {
+    planningAgent: planningAgent,
   },
 });
