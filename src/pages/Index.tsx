@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const Index = () => {
   const [response, setResponse] = useState<any>(null);
@@ -354,9 +355,91 @@ const Index = () => {
     }
   };
 
+  const renderWorkflowResult = () => {
+    if (!response) return null;
+
+    // Check if this is a rap song result
+    if (response.result && typeof response.result === 'string' && response.result.includes('verse') || response.result.includes('chorus')) {
+      return (
+        <Card className="mt-8">
+          <CardHeader>
+            <CardTitle>🎤 Generated Rap Song</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="whitespace-pre-wrap font-mono text-sm bg-gray-50 p-4 rounded border">
+              {response.result}
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    // Check if this is a joke result
+    if (response.result && typeof response.result === 'string' && (response.result.includes('Why') || response.result.includes('joke'))) {
+      return (
+        <Card className="mt-8">
+          <CardHeader>
+            <CardTitle>😄 Generated Joke</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-lg bg-yellow-50 p-4 rounded border border-yellow-200">
+              {response.result}
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    // Check if this is a definition result
+    if (response.result && typeof response.result === 'string' && response.result.includes('definition')) {
+      return (
+        <Card className="mt-8">
+          <CardHeader>
+            <CardTitle>📖 Word Definition</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-base bg-blue-50 p-4 rounded border border-blue-200">
+              {response.result}
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    // Check if this is an activity planning result
+    if (response.result && typeof response.result === 'string' && (response.result.includes('activity') || response.result.includes('activities'))) {
+      return (
+        <Card className="mt-8">
+          <CardHeader>
+            <CardTitle>🗺️ Activity Plan</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="whitespace-pre-wrap bg-green-50 p-4 rounded border border-green-200">
+              {response.result}
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    // Default fallback - show raw JSON for other results
+    return (
+      <Card className="mt-8">
+        <CardHeader>
+          <CardTitle>⚙️ Workflow Response</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <pre className="bg-gray-100 p-4 rounded overflow-auto text-sm whitespace-pre-wrap">
+            {JSON.stringify(response, null, 2)}
+          </pre>
+        </CardContent>
+      </Card>
+    );
+  };
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-8">
-      <div className="text-center max-w-2xl">
+      <div className="text-center max-w-2xl w-full">
         <h1 className="text-4xl font-bold mb-4">Mastra Workflows</h1>
         <p className="text-xl text-gray-600 mb-8">Test your workflows here!</p>
         
@@ -458,14 +541,7 @@ const Index = () => {
           </div>
         </div>
 
-        {response && (
-          <div className="mt-8 p-6 bg-white rounded-lg shadow-lg text-left">
-            <h2 className="text-2xl font-semibold mb-4">Workflow Response:</h2>
-            <pre className="bg-gray-100 p-4 rounded overflow-auto text-sm">
-              {JSON.stringify(response, null, 2)}
-            </pre>
-          </div>
-        )}
+        {renderWorkflowResult()}
       </div>
     </div>
   );
