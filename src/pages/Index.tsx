@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +11,7 @@ const Index = () => {
   const [userMessage, setUserMessage] = useState("");
   const [jokeWord, setJokeWord] = useState("");
   const [cityForActivities, setCityForActivities] = useState("");
+  const [rapTheme, setRapTheme] = useState("");
   const { toast } = useToast();
 
   const callWorkflowEndpoint = async () => {
@@ -292,6 +292,68 @@ const Index = () => {
     }
   };
 
+  const generateRapSong = async () => {
+    if (!rapTheme.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a theme for the rap song",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Create a new run
+      const createRunResponse = await fetch(
+        "https://nqspuwzqrwamccpqwwvj.supabase.co/functions/v1/api/workflows/rap-song/create-run",
+        { method: "POST" }
+      );
+      
+      if (!createRunResponse.ok) {
+        throw new Error(`HTTP error! status: ${createRunResponse.status}`);
+      }
+      
+      const runData = await createRunResponse.json();
+      const runId = runData.runId;
+
+      // Start the workflow
+      const startResponse = await fetch(
+        `https://nqspuwzqrwamccpqwwvj.supabase.co/functions/v1/api/workflows/rap-song/start?runId=${runId}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            inputData: { theme: rapTheme.trim() },
+          }),
+        }
+      );
+
+      if (!startResponse.ok) {
+        throw new Error(`HTTP error! status: ${startResponse.status}`);
+      }
+
+      const result = await startResponse.json();
+      setResponse(result);
+      
+      toast({
+        title: "Success!",
+        description: `Generated rap song about "${rapTheme}"`,
+      });
+    } catch (error) {
+      console.error("Error generating rap song:", error);
+      toast({
+        title: "Error",
+        description: "Failed to generate rap song",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-8">
       <div className="text-center max-w-2xl">
@@ -339,6 +401,24 @@ const Index = () => {
               variant="outline"
             >
               {loading ? "Generating..." : "Generate Joke"}
+            </Button>
+          </div>
+
+          <div className="flex gap-2">
+            <Input
+              type="text"
+              placeholder="Enter a theme for rap song..."
+              value={rapTheme}
+              onChange={(e) => setRapTheme(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && generateRapSong()}
+              className="flex-1"
+            />
+            <Button 
+              onClick={generateRapSong} 
+              disabled={loading || !rapTheme.trim()}
+              variant="outline"
+            >
+              {loading ? "Generating..." : "Generate Rap Song"}
             </Button>
           </div>
 
