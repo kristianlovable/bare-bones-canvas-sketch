@@ -10,6 +10,7 @@ const Index = () => {
   const [word, setWord] = useState("");
   const [userMessage, setUserMessage] = useState("");
   const [jokeWord, setJokeWord] = useState("");
+  const [numberToClassify, setNumberToClassify] = useState("");
   const { toast } = useToast();
 
   const callWorkflowEndpoint = async () => {
@@ -228,6 +229,70 @@ const Index = () => {
     }
   };
 
+  const classifyNumber = async () => {
+    const number = parseInt(numberToClassify);
+    
+    if (isNaN(number)) {
+      toast({
+        title: "Error",
+        description: "Please enter a valid number",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Create a new run
+      const createRunResponse = await fetch(
+        "https://nqspuwzqrwamccpqwwvj.supabase.co/functions/v1/api/workflows/number-classifier/create-run",
+        { method: "POST" }
+      );
+      
+      if (!createRunResponse.ok) {
+        throw new Error(`HTTP error! status: ${createRunResponse.status}`);
+      }
+      
+      const runData = await createRunResponse.json();
+      const runId = runData.runId;
+
+      // Start the workflow
+      const startResponse = await fetch(
+        `https://nqspuwzqrwamccpqwwvj.supabase.co/functions/v1/api/workflows/number-classifier/start?runId=${runId}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            inputData: { number },
+          }),
+        }
+      );
+
+      if (!startResponse.ok) {
+        throw new Error(`HTTP error! status: ${startResponse.status}`);
+      }
+
+      const result = await startResponse.json();
+      setResponse(result);
+      
+      toast({
+        title: "Success!",
+        description: `Classified number ${number} successfully`,
+      });
+    } catch (error) {
+      console.error("Error classifying number:", error);
+      toast({
+        title: "Error",
+        description: "Failed to classify number",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-8">
       <div className="text-center max-w-2xl">
@@ -275,6 +340,24 @@ const Index = () => {
               variant="outline"
             >
               {loading ? "Generating..." : "Generate Joke"}
+            </Button>
+          </div>
+
+          <div className="flex gap-2">
+            <Input
+              type="number"
+              placeholder="Enter a number to classify..."
+              value={numberToClassify}
+              onChange={(e) => setNumberToClassify(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && classifyNumber()}
+              className="flex-1"
+            />
+            <Button 
+              onClick={classifyNumber} 
+              disabled={loading || !numberToClassify.trim()}
+              variant="outline"
+            >
+              {loading ? "Classifying..." : "Classify Number"}
             </Button>
           </div>
 
