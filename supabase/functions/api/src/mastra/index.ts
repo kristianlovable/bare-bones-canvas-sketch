@@ -6,7 +6,6 @@ import { dummyWorkflow } from "./workflows/test.ts";
 import { definitionWorkflow } from "./workflows/definition.ts";
 import { issueTriageWorkflow } from "./workflows/issue-triage.ts";
 import { jokeWorkflow } from "./workflows/joke.ts";
-import { numberClassifierWorkflow } from "./workflows/number-classifier.ts";
 import { activityPlanningWorkflow } from "./workflows/activity-planning.ts";
 import { planningAgent } from "./agents/planning-agent.ts";
 
@@ -31,7 +30,6 @@ export const mastra = new Mastra({
     definition: definitionWorkflow,
     "issue-triage": issueTriageWorkflow,
     joke: jokeWorkflow,
-    "number-classifier": numberClassifierWorkflow,
     "activity-planning": activityPlanningWorkflow,
   },
   agents: {
