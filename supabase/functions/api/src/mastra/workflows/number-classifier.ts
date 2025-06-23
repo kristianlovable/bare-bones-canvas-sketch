@@ -78,7 +78,6 @@ const oddNumberStep = createStep({
 export const numberClassifierWorkflow = createWorkflow({
   id: "number-classifier",
   description: "A workflow that classifies numbers as even or odd and provides different information based on the classification",
-  steps: [evenNumberStep, oddNumberStep],
   inputSchema: z.object({
     number: z.number(),
   }),
@@ -98,7 +97,19 @@ export const numberClassifierWorkflow = createWorkflow({
   ]),
 })
   .branch([
-    [async ({ inputData: { number } }) => number % 2 === 0, evenNumberStep],
-    [async ({ inputData: { number } }) => number % 2 !== 0, oddNumberStep]
+    // Branch for even numbers
+    [
+      async ({ inputData }) => {
+        return inputData.number % 2 === 0;
+      },
+      evenNumberStep,
+    ],
+    // Branch for odd numbers  
+    [
+      async ({ inputData }) => {
+        return inputData.number % 2 !== 0;
+      },
+      oddNumberStep,
+    ],
   ])
   .commit();
