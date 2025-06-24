@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -484,28 +485,45 @@ const Index = () => {
   const renderWorkflowResult = () => {
     if (!response) return null;
 
-    // Check if this is a word length result
+    // Prioritize word length analysis result
     if (response.result && typeof response.result === 'object' && response.result.category) {
       return (
         <Card className="mt-8">
           <CardHeader>
-            <CardTitle>📏 Word Length Analysis</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              📏 Word Length Analysis
+              {response.result.category === 'long' ? '📏🔥' : '📏✨'}
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              <div className="text-lg font-semibold">
-                Word: "{response.result.word}"
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                <div>
+                  <div className="text-2xl font-bold text-gray-800">
+                    "{response.result.word}"
+                  </div>
+                  <div className="text-sm text-gray-500">Input word</div>
+                </div>
+                <div className="text-right">
+                  <div className={`text-3xl font-bold ${response.result.category === 'long' ? 'text-blue-600' : 'text-green-600'}`}>
+                    {response.result.category.toUpperCase()}
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    {response.result.length} characters
+                  </div>
+                </div>
               </div>
-              <div className="text-md">
-                Category: <span className={`font-bold ${response.result.category === 'long' ? 'text-blue-600' : 'text-green-600'}`}>
-                  {response.result.category.toUpperCase()}
-                </span>
+              
+              <div className="p-4 bg-blue-50 rounded-lg border-l-4 border-blue-400">
+                <div className="font-medium text-blue-800 mb-1">Analysis Result:</div>
+                <div className="text-blue-700">
+                  {response.result.message}
+                </div>
               </div>
-              <div className="text-md">
-                Length: {response.result.length} characters
-              </div>
-              <div className="text-sm bg-gray-50 p-3 rounded border mt-3">
-                {response.result.message}
+
+              <div className="text-xs text-gray-400 p-2 bg-gray-100 rounded">
+                Classification: Words with 5 characters or less are considered "short", 
+                while words with more than 5 characters are considered "long"
               </div>
             </div>
           </CardContent>
@@ -577,7 +595,25 @@ const Index = () => {
       );
     }
 
-    // Default fallback - show raw JSON for other results
+    // Hide technical workflow messages, show only if there's an actual result
+    if (response.message && response.message.includes("Workflow run started") && !response.result) {
+      return (
+        <Card className="mt-8">
+          <CardHeader>
+            <CardTitle>⚙️ Processing...</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center py-4">
+              <div className="animate-pulse text-gray-500">
+                Workflow is running, please wait for results...
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    // Default fallback - show raw JSON but minimize technical details
     return (
       <Card className="mt-8">
         <CardHeader>
