@@ -9,6 +9,7 @@ import { jokeWorkflow } from "./workflows/joke.ts";
 import { activityPlanningWorkflow } from "./workflows/activity-planning.ts";
 import { rapSongWorkflow } from "./workflows/rap-song.ts";
 import { contentCreationWorkflow } from "./workflows/content-creation.ts";
+import { wordLengthWorkflow } from "./workflows/word-length.ts";
 import { planningAgent } from "./agents/planning-agent.ts";
 import { rapAgent } from "./agents/rap-agent.ts";
 import { contentAgent } from "./agents/content-agent.ts";
@@ -40,6 +41,7 @@ export const mastra = new Mastra({
     "activity-planning": activityPlanningWorkflow,
     "rap-song": rapSongWorkflow,
     "content-creation": contentCreationWorkflow,
+    "word-length": wordLengthWorkflow,
   },
   agents: {
     planningAgent: planningAgent,

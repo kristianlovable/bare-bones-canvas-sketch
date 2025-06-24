@@ -14,6 +14,7 @@ const Index = () => {
   const [cityForActivities, setCityForActivities] = useState("");
   const [rapTheme, setRapTheme] = useState("");
   const [contentTopic, setContentTopic] = useState("");
+  const [wordLengthInput, setWordLengthInput] = useState("");
   const { toast } = useToast();
 
   const callWorkflowEndpoint = async () => {
@@ -418,8 +419,99 @@ const Index = () => {
     }
   };
 
+  const checkWordLength = async () => {
+    if (!wordLengthInput.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a word to check its length",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Create a new run
+      const createRunResponse = await fetch(
+        "https://nqspuwzqrwamccpqwwvj.supabase.co/functions/v1/api/workflows/word-length/create-run",
+        { method: "POST" }
+      );
+      
+      if (!createRunResponse.ok) {
+        throw new Error(`HTTP error! status: ${createRunResponse.status}`);
+      }
+      
+      const runData = await createRunResponse.json();
+      const runId = runData.runId;
+
+      // Start the workflow
+      const startResponse = await fetch(
+        `https://nqspuwzqrwamccpqwwvj.supabase.co/functions/v1/api/workflows/word-length/start?runId=${runId}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            inputData: { word: wordLengthInput.trim() },
+          }),
+        }
+      );
+
+      if (!startResponse.ok) {
+        throw new Error(`HTTP error! status: ${startResponse.status}`);
+      }
+
+      const result = await startResponse.json();
+      setResponse(result);
+      
+      toast({
+        title: "Success!",
+        description: `Analyzed word "${wordLengthInput}"`,
+      });
+    } catch (error) {
+      console.error("Error checking word length:", error);
+      toast({
+        title: "Error",
+        description: "Failed to check word length",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const renderWorkflowResult = () => {
     if (!response) return null;
+
+    // Check if this is a word length result
+    if (response.result && typeof response.result === 'object' && response.result.category) {
+      return (
+        <Card className="mt-8">
+          <CardHeader>
+            <CardTitle>📏 Word Length Analysis</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <div className="text-lg font-semibold">
+                Word: "{response.result.word}"
+              </div>
+              <div className="text-md">
+                Category: <span className={`font-bold ${response.result.category === 'long' ? 'text-blue-600' : 'text-green-600'}`}>
+                  {response.result.category.toUpperCase()}
+                </span>
+              </div>
+              <div className="text-md">
+                Length: {response.result.length} characters
+              </div>
+              <div className="text-sm bg-gray-50 p-3 rounded border mt-3">
+                {response.result.message}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
 
     // Check if this is a content creation result
     if (response.result && typeof response.result === 'string' && (response.result.includes('introduction') || response.result.includes('conclusion') || response.result.length > 500)) {
@@ -547,6 +639,24 @@ const Index = () => {
               variant="outline"
             >
               {loading ? "Generating..." : "Generate Joke"}
+            </Button>
+          </div>
+
+          <div className="flex gap-2">
+            <Input
+              type="text"
+              placeholder="Enter a word to check length..."
+              value={wordLengthInput}
+              onChange={(e) => setWordLengthInput(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && checkWordLength()}
+              className="flex-1"
+            />
+            <Button 
+              onClick={checkWordLength} 
+              disabled={loading || !wordLengthInput.trim()}
+              variant="outline"
+            >
+              {loading ? "Checking..." : "Check Word Length"}
             </Button>
           </div>
 
