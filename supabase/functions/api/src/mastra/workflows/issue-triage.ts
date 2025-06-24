@@ -38,13 +38,13 @@ const summarizeUserReportStep = createStep({
               role: "system",
               content: `You are a technical support analyst. Analyze user reports and extract structured information.
 
-Return a JSON object with:
+Return ONLY a valid JSON object with:
 - problemDescription: Clear description of the issue
 - productArea: Module/area affected (e.g., "Authentication", "Payment", "UI", "API", "Database")
 - severity: One of "low", "medium", "high", "critical"
 - summary: Brief summary for internal use
 
-Be concise and focus on technical details.`,
+Do not wrap the JSON in markdown code blocks. Return only the JSON.`,
             },
             {
               role: "user",
@@ -61,7 +61,18 @@ Be concise and focus on technical details.`,
       }
 
       const data = await response.json();
-      const result = JSON.parse(data.choices[0].message.content.trim());
+      let responseText = data.choices[0].message.content.trim();
+
+      // Extract JSON from markdown code blocks if present
+      const jsonMatch = responseText.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
+      if (jsonMatch) {
+        responseText = jsonMatch[1];
+      }
+
+      // Clean up any remaining markdown formatting
+      responseText = responseText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+
+      const result = JSON.parse(responseText);
 
       console.log("User report summarized:", result);
 
