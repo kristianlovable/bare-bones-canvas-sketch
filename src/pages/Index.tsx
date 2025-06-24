@@ -1,4 +1,5 @@
 
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +18,115 @@ const Index = () => {
   const [contentTopic, setContentTopic] = useState("");
   const [wordLengthInput, setWordLengthInput] = useState("");
   const { toast } = useToast();
+
+  // Generic function to execute workflow with watch streaming
+  const executeWorkflowWithWatch = async (workflowId: string, inputData: any, successMessage: string) => {
+    setLoading(true);
+    setResponse({ message: "Starting workflow...", status: "starting" });
+    
+    try {
+      // Create a new run
+      const createRunResponse = await fetch(
+        `https://nqspuwzqrwamccpqwwvj.supabase.co/functions/v1/api/workflows/${workflowId}/create-run`,
+        { method: "POST" }
+      );
+      
+      if (!createRunResponse.ok) {
+        throw new Error(`HTTP error! status: ${createRunResponse.status}`);
+      }
+      
+      const runData = await createRunResponse.json();
+      const runId = runData.runId;
+
+      // Start the workflow (don't await the full completion)
+      fetch(
+        `https://nqspuwzqrwamccpqwwvj.supabase.co/functions/v1/api/workflows/${workflowId}/start?runId=${runId}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ inputData }),
+        }
+      );
+
+      // Start watching the workflow progress
+      const watchUrl = `https://nqspuwzqrwamccpqwwvj.supabase.co/functions/v1/api/workflows/${workflowId}/watch?runId=${runId}`;
+      
+      const watchResponse = await fetch(watchUrl);
+      if (!watchResponse.ok) {
+        throw new Error(`Watch request failed: ${watchResponse.status}`);
+      }
+
+      const reader = watchResponse.body?.getReader();
+      if (!reader) {
+        throw new Error("No response body available for streaming");
+      }
+
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        
+        if (done) break;
+        
+        buffer += decoder.decode(value, { stream: true });
+        
+        // Process complete chunks (separated by record separator)
+        const chunks = buffer.split('\x1E');
+        buffer = chunks.pop() || ''; // Keep incomplete chunk in buffer
+        
+        for (const chunk of chunks) {
+          if (chunk.trim()) {
+            try {
+              const data = JSON.parse(chunk);
+              console.log("Received workflow update:", data);
+              
+              if (data.payload?.workflowState) {
+                const workflowState = data.payload.workflowState;
+                
+                if (workflowState.status === 'success' && workflowState.result) {
+                  setResponse({ result: workflowState.result, status: 'success' });
+                  toast({
+                    title: "Success!",
+                    description: successMessage,
+                  });
+                } else if (workflowState.status === 'failed') {
+                  setResponse({ error: workflowState.error, status: 'failed' });
+                  toast({
+                    title: "Error",
+                    description: "Workflow execution failed",
+                    variant: "destructive",
+                  });
+                } else {
+                  // Still running
+                  setResponse({ 
+                    message: "Workflow is running...", 
+                    status: workflowState.status,
+                    steps: workflowState.steps 
+                  });
+                }
+              }
+            } catch (parseError) {
+              console.error("Error parsing chunk:", parseError, "Chunk:", chunk);
+            }
+          }
+        }
+      }
+      
+    } catch (error) {
+      console.error("Error executing workflow:", error);
+      setResponse({ error: error.message, status: 'error' });
+      toast({
+        title: "Error",
+        description: "Failed to execute workflow",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const callWorkflowEndpoint = async () => {
     setLoading(true);
@@ -58,56 +168,11 @@ const Index = () => {
       return;
     }
 
-    setLoading(true);
-    try {
-      // Create a new run
-      const createRunResponse = await fetch(
-        "https://nqspuwzqrwamccpqwwvj.supabase.co/functions/v1/api/workflows/definition/create-run",
-        { method: "POST" }
-      );
-      
-      if (!createRunResponse.ok) {
-        throw new Error(`HTTP error! status: ${createRunResponse.status}`);
-      }
-      
-      const runData = await createRunResponse.json();
-      const runId = runData.runId;
-
-      // Start the workflow
-      const startResponse = await fetch(
-        `https://nqspuwzqrwamccpqwwvj.supabase.co/functions/v1/api/workflows/definition/start?runId=${runId}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            inputData: { word: word.trim() },
-          }),
-        }
-      );
-
-      if (!startResponse.ok) {
-        throw new Error(`HTTP error! status: ${startResponse.status}`);
-      }
-
-      const result = await startResponse.json();
-      setResponse(result);
-      
-      toast({
-        title: "Success!",
-        description: `Got definition for "${word}"`,
-      });
-    } catch (error) {
-      console.error("Error getting definition:", error);
-      toast({
-        title: "Error",
-        description: "Failed to get definition",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
+    await executeWorkflowWithWatch(
+      "definition", 
+      { word: word.trim() }, 
+      `Got definition for "${word}"`
+    );
   };
 
   const triageIssue = async () => {
@@ -120,56 +185,11 @@ const Index = () => {
       return;
     }
 
-    setLoading(true);
-    try {
-      // Create a new run
-      const createRunResponse = await fetch(
-        "https://nqspuwzqrwamccpqwwvj.supabase.co/functions/v1/api/workflows/issue-triage/create-run",
-        { method: "POST" }
-      );
-      
-      if (!createRunResponse.ok) {
-        throw new Error(`HTTP error! status: ${createRunResponse.status}`);
-      }
-      
-      const runData = await createRunResponse.json();
-      const runId = runData.runId;
-
-      // Start the workflow
-      const startResponse = await fetch(
-        `https://nqspuwzqrwamccpqwwvj.supabase.co/functions/v1/api/workflows/issue-triage/start?runId=${runId}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            inputData: { userMessage: userMessage.trim() },
-          }),
-        }
-      );
-
-      if (!startResponse.ok) {
-        throw new Error(`HTTP error! status: ${startResponse.status}`);
-      }
-
-      const result = await startResponse.json();
-      setResponse(result);
-      
-      toast({
-        title: "Success!",
-        description: "Issue triage completed and Slack notification sent",
-      });
-    } catch (error) {
-      console.error("Error triaging issue:", error);
-      toast({
-        title: "Error",
-        description: "Failed to triage issue",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
+    await executeWorkflowWithWatch(
+      "issue-triage", 
+      { userMessage: userMessage.trim() }, 
+      "Issue triage completed and Slack notification sent"
+    );
   };
 
   const generateJoke = async () => {
@@ -182,56 +202,11 @@ const Index = () => {
       return;
     }
 
-    setLoading(true);
-    try {
-      // Create a new run
-      const createRunResponse = await fetch(
-        "https://nqspuwzqrwamccpqwwvj.supabase.co/functions/v1/api/workflows/joke/create-run",
-        { method: "POST" }
-      );
-      
-      if (!createRunResponse.ok) {
-        throw new Error(`HTTP error! status: ${createRunResponse.status}`);
-      }
-      
-      const runData = await createRunResponse.json();
-      const runId = runData.runId;
-
-      // Start the workflow
-      const startResponse = await fetch(
-        `https://nqspuwzqrwamccpqwwvj.supabase.co/functions/v1/api/workflows/joke/start?runId=${runId}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            inputData: { word: jokeWord.trim() },
-          }),
-        }
-      );
-
-      if (!startResponse.ok) {
-        throw new Error(`HTTP error! status: ${startResponse.status}`);
-      }
-
-      const result = await startResponse.json();
-      setResponse(result);
-      
-      toast({
-        title: "Success!",
-        description: `Generated joke for "${jokeWord}"`,
-      });
-    } catch (error) {
-      console.error("Error generating joke:", error);
-      toast({
-        title: "Error",
-        description: "Failed to generate joke",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
+    await executeWorkflowWithWatch(
+      "joke", 
+      { word: jokeWord.trim() }, 
+      `Generated joke for "${jokeWord}"`
+    );
   };
 
   const planActivities = async () => {
@@ -244,56 +219,11 @@ const Index = () => {
       return;
     }
 
-    setLoading(true);
-    try {
-      // Create a new run
-      const createRunResponse = await fetch(
-        "https://nqspuwzqrwamccpqwwvj.supabase.co/functions/v1/api/workflows/activity-planning/create-run",
-        { method: "POST" }
-      );
-      
-      if (!createRunResponse.ok) {
-        throw new Error(`HTTP error! status: ${createRunResponse.status}`);
-      }
-      
-      const runData = await createRunResponse.json();
-      const runId = runData.runId;
-
-      // Start the workflow
-      const startResponse = await fetch(
-        `https://nqspuwzqrwamccpqwwvj.supabase.co/functions/v1/api/workflows/activity-planning/start?runId=${runId}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            inputData: { city: cityForActivities.trim() },
-          }),
-        }
-      );
-
-      if (!startResponse.ok) {
-        throw new Error(`HTTP error! status: ${startResponse.status}`);
-      }
-
-      const result = await startResponse.json();
-      setResponse(result);
-      
-      toast({
-        title: "Success!",
-        description: `Generated activity plan for ${cityForActivities}`,
-      });
-    } catch (error) {
-      console.error("Error planning activities:", error);
-      toast({
-        title: "Error",
-        description: "Failed to plan activities",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
+    await executeWorkflowWithWatch(
+      "activity-planning", 
+      { city: cityForActivities.trim() }, 
+      `Generated activity plan for ${cityForActivities}`
+    );
   };
 
   const generateRapSong = async () => {
@@ -306,56 +236,11 @@ const Index = () => {
       return;
     }
 
-    setLoading(true);
-    try {
-      // Create a new run
-      const createRunResponse = await fetch(
-        "https://nqspuwzqrwamccpqwwvj.supabase.co/functions/v1/api/workflows/rap-song/create-run",
-        { method: "POST" }
-      );
-      
-      if (!createRunResponse.ok) {
-        throw new Error(`HTTP error! status: ${createRunResponse.status}`);
-      }
-      
-      const runData = await createRunResponse.json();
-      const runId = runData.runId;
-
-      // Start the workflow
-      const startResponse = await fetch(
-        `https://nqspuwzqrwamccpqwwvj.supabase.co/functions/v1/api/workflows/rap-song/start?runId=${runId}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            inputData: { theme: rapTheme.trim() },
-          }),
-        }
-      );
-
-      if (!startResponse.ok) {
-        throw new Error(`HTTP error! status: ${startResponse.status}`);
-      }
-
-      const result = await startResponse.json();
-      setResponse(result);
-      
-      toast({
-        title: "Success!",
-        description: `Generated rap song about "${rapTheme}"`,
-      });
-    } catch (error) {
-      console.error("Error generating rap song:", error);
-      toast({
-        title: "Error",
-        description: "Failed to generate rap song",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
+    await executeWorkflowWithWatch(
+      "rap-song", 
+      { theme: rapTheme.trim() }, 
+      `Generated rap song about "${rapTheme}"`
+    );
   };
 
   const createContent = async () => {
@@ -368,56 +253,11 @@ const Index = () => {
       return;
     }
 
-    setLoading(true);
-    try {
-      // Create a new run
-      const createRunResponse = await fetch(
-        "https://nqspuwzqrwamccpqwwvj.supabase.co/functions/v1/api/workflows/content-creation/create-run",
-        { method: "POST" }
-      );
-      
-      if (!createRunResponse.ok) {
-        throw new Error(`HTTP error! status: ${createRunResponse.status}`);
-      }
-      
-      const runData = await createRunResponse.json();
-      const runId = runData.runId;
-
-      // Start the workflow
-      const startResponse = await fetch(
-        `https://nqspuwzqrwamccpqwwvj.supabase.co/functions/v1/api/workflows/content-creation/start?runId=${runId}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            inputData: { topic: contentTopic.trim() },
-          }),
-        }
-      );
-
-      if (!startResponse.ok) {
-        throw new Error(`HTTP error! status: ${startResponse.status}`);
-      }
-
-      const result = await startResponse.json();
-      setResponse(result);
-      
-      toast({
-        title: "Success!",
-        description: `Created content about "${contentTopic}"`,
-      });
-    } catch (error) {
-      console.error("Error creating content:", error);
-      toast({
-        title: "Error",
-        description: "Failed to create content",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
+    await executeWorkflowWithWatch(
+      "content-creation", 
+      { topic: contentTopic.trim() }, 
+      `Created content about "${contentTopic}"`
+    );
   };
 
   const checkWordLength = async () => {
@@ -430,56 +270,11 @@ const Index = () => {
       return;
     }
 
-    setLoading(true);
-    try {
-      // Create a new run
-      const createRunResponse = await fetch(
-        "https://nqspuwzqrwamccpqwwvj.supabase.co/functions/v1/api/workflows/word-length/create-run",
-        { method: "POST" }
-      );
-      
-      if (!createRunResponse.ok) {
-        throw new Error(`HTTP error! status: ${createRunResponse.status}`);
-      }
-      
-      const runData = await createRunResponse.json();
-      const runId = runData.runId;
-
-      // Start the workflow
-      const startResponse = await fetch(
-        `https://nqspuwzqrwamccpqwwvj.supabase.co/functions/v1/api/workflows/word-length/start?runId=${runId}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            inputData: { word: wordLengthInput.trim() },
-          }),
-        }
-      );
-
-      if (!startResponse.ok) {
-        throw new Error(`HTTP error! status: ${startResponse.status}`);
-      }
-
-      const result = await startResponse.json();
-      setResponse(result);
-      
-      toast({
-        title: "Success!",
-        description: `Analyzed word "${wordLengthInput}"`,
-      });
-    } catch (error) {
-      console.error("Error checking word length:", error);
-      toast({
-        title: "Error",
-        description: "Failed to check word length",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
+    await executeWorkflowWithWatch(
+      "word-length", 
+      { word: wordLengthInput.trim() }, 
+      `Analyzed word "${wordLengthInput}"`
+    );
   };
 
   const renderWorkflowResult = () => {
@@ -595,8 +390,8 @@ const Index = () => {
       );
     }
 
-    // Hide technical workflow messages, show only if there's an actual result
-    if (response.message && response.message.includes("Workflow run started") && !response.result) {
+    // Show workflow status while running
+    if (response.status === 'starting' || response.status === 'running' || response.message?.includes("running")) {
       return (
         <Card className="mt-8">
           <CardHeader>
@@ -605,8 +400,24 @@ const Index = () => {
           <CardContent>
             <div className="text-center py-4">
               <div className="animate-pulse text-gray-500">
-                Workflow is running, please wait for results...
+                {response.message || "Workflow is running, please wait for results..."}
               </div>
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    // Show error state
+    if (response.error || response.status === 'failed') {
+      return (
+        <Card className="mt-8">
+          <CardHeader>
+            <CardTitle>❌ Error</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-red-600 p-4 bg-red-50 rounded border border-red-200">
+              {response.error || "Workflow execution failed"}
             </div>
           </CardContent>
         </Card>
@@ -775,3 +586,4 @@ const Index = () => {
 };
 
 export default Index;
+
